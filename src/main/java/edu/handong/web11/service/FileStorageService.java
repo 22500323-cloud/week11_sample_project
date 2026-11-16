@@ -21,6 +21,7 @@ import java.util.UUID;
 @Service
 public class FileStorageService {
     private static final Set<String> ALLOWED = Set.of("jpg", "jpeg", "png", "gif", "pdf", "txt");
+    //ALLOWED:업로드를 허용하는 파일 목록, set : 중복되지 않는 값 저장, uploadDir : 실제 파일이 저장되는 폴더
     private final Path uploadDir;
 
     public FileStorageService(@Value("${app.upload-dir}") String path) throws IOException {
@@ -29,16 +30,24 @@ public class FileStorageService {
     }
 
     public Attachment store(MultipartFile file) {
+        //업로드된 파일이 비어있는지 확인, 빈 파일이면 업로드 중단
         if (file.isEmpty()) throw new IllegalArgumentException("빈 파일은 업로드할 수 없습니다.");
         String original = file.getOriginalFilename();
+        //파일 이름이 없거나 경로 조작에 사용될 수 있는 문자 포함여부 검사
         if (original == null || original.isBlank() || original.contains("/") || original.contains("\\") || original.contains(".."))
             throw new IllegalArgumentException("잘못된 파일 이름입니다.");
+        //파일 이름 길이 제한
         if (original.length() > 240) throw new IllegalArgumentException("파일 이름이 너무 깁니다.");
+        //마지막 점 뒤에 있는 확장자 가져오고 소문자로 변경
         int dot = original.lastIndexOf('.');
         String ext = dot < 0 ? "" : original.substring(dot + 1).toLowerCase(Locale.ROOT);
+        //허용된 파일만 업로드할 수 있도록
         if (!ALLOWED.contains(ext)) throw new IllegalArgumentException("허용 형식: jpg, jpeg, png, gif, pdf, txt");
+        //파일의 크기가 10를 초과하면 업로드 안됨
         if (file.getSize() > 10L * 1024 * 1024) throw new IllegalArgumentException("파일은 10MB 이하만 가능합니다.");
+        //uuid사용하여 중복되지 않는 파일명 만듦
         String stored = UUID.randomUUID() + "." + ext;
+        //폴더와 저장명을 결합하여 실제 저장 결로 만듦
         Path target = uploadDir.resolve(stored).normalize();
         if (!target.startsWith(uploadDir)) throw new IllegalArgumentException("잘못된 파일 경로입니다.");
         try (InputStream input = file.getInputStream()) {

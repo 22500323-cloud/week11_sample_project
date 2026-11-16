@@ -1,36 +1,39 @@
-# Week 11 — Attachment Board (Student Sample)
 
-Spring Boot + Thymeleaf + JPA + MariaDB: 게시글 CRUD / 다중 첨부파일 업로드 / 다운로드
+Project Structure & Spring MVC
+Q. PostController, PostService, PostRepository는 각각 어떤 역할을 하며, 서로 어떻게 연결되는가?
+- PostController는 사용자의 요청을 받아 PostService에 전달하고 결과에 따라 화면을 보여줌
+- PostService는 게시글 작성, 조회, 수정, 삭제 등의 기능을 처리하며 PostRepository를 통해 데이터베이스에 접근
+각 클래스가 역할을 나누어 처리하기 때문에 코드를 관리하기 쉽다.
+Q. 게시글 작성 시 HTML Form의 입력값과 첨부파일은 Controller에 어떻게 전달되는가?
+- HTML Form에서 입력한 제목과 내용은 PostForm 객체에 전달
+- 첨부파일은 MultipartFile 객체의 리스트로 전달
+- Controller는 전달받은 데이터를 PostService의 create() 메서드에 전달
+- Service에서 게시글과 파일을 처리
 
-## 실행하기
-1. Java 17+ 및 MariaDB 준비, `CREATE DATABASE web11 CHARACTER SET utf8mb4;`
-2. 환경변수 `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`를 자신의 MariaDB에 맞게 설정. 기본값은 `jdbc:mariadb://localhost:3306/web11`, `webuser`, `webpass`.
-3. Gradle이 설치된 환경: `gradle bootRun` / IntelliJ: `AttachmentBoardApplication.main()` 실행.
-4. 접속: http://localhost:8080/posts
-
-> Gradle Wrapper는 이 ZIP에 포함되어 있지 않습니다. IntelliJ의 Gradle 지원 또는 설치된 Gradle을 사용하세요. `gradle wrapper` 실행 후 생성된 wrapper 파일은 Git에 포함하는 것을 권장합니다.
-
-## 구현된 기능
-- 게시글 목록 / 생성 / 상세 / 수정 / 삭제
-- 게시글 생성 시 여러 파일 선택, UUID 이름으로 `uploads/`에 저장
-- `attachments` 테이블에 메타데이터 저장
-- 첨부파일 다운로드 (`GET /attachments/{id}/download`)
-
-## 학생 과제 (TODO)
-1. 코드를 분석하여 업로드/다운로드 요청 흐름 정리
-2. 화면이나 정보 표시 3곳 이상 수정
-3. **이미지 미리보기** 구현: `GET /attachments/{id}/view` + 상세 화면 `<img>` 표시. 이미지(jpg/jpeg/png/gif)만 허용하고 `Content-Type` 정확히 설정
-4. 정상/오류 테스트 후 README 및 Weekly Review 작성
-
-## 코드 위치
-- `PostController`: 게시글 화면 / Form
-- `AttachmentController`: 다운로드 + 미리보기 TODO
-- `PostService`: JPA CRUD와 파일 저장 연결
-- `FileStorageService`: 파일 검증 / UUID 저장 / 로드
-- `Post`, `Attachment`: 1:N 관계
-- `templates/posts/detail.html`: 미리보기 TODO
-
-## 주의사항
-- 학습용 프로젝트입니다. 로그인/접근 권한, 업로드 파일의 실제 바이트 검증, 악성 파일 검사, CSRF 보호, 파일 저장과 DB 트랜잭션의 완전한 일관성 보장 등은 구현하지 않았습니다. 인터넷 공개 배포 전에 보강이 필요합니다.
-- `spring.jpa.hibernate.ddl-auto=update`는 학습용 설정이며 운영 DB에는 그대로 사용하지 않습니다.
-- Render 기본 파일 시스템에 저장된 업로드 파일은 재시작/재배포 시 유지되지 않을 수 있습니다. 이번 과제는 **로컬 파일 처리**를 평가합니다.
+JPA & Entity Relationship
+Q. Post와 Attachment Entity는 어떤 관계이며, @ManyToOne과 @OneToMany는 각각 어떤 역할을 하는가?
+- 게시글 하나에 여러 첨부파일을 연결할 수 있다
+- Post에서는 @OneToMany를 사용하여 여러 첨부파일을 관리
+- Attachment에서는 @ManyToOne을 사용하여 하나의 게시글과 연결
+- Attachment의 post_id가 외래키 역할
+Q. cascade = CascadeType.ALL과 orphanRemoval = true는 어떤 역할을 하며, 실제 디스크에 저장된 파일에도 영향을 주는가?
+- CascadeType.ALL은 게시글에 저장, 수정, 삭제 등의 작업을 할 때 연결된 첨부파일에도 해당 작업을 전파
+- orphanRemoval = true는 게시글과 연결이 끊어진 첨부파일을 데이터베이스에서 삭제
+- 하지만 실제 디스크에 저장된 파일까지 자동으로 삭제하지는 않기 때문에 FileStorageService의 삭제 기능을 별도로 사용해야 함
+File Upload
+Q. MultipartFile은 무엇이며, 업로드된 파일은 어떤 과정을 거쳐 서버에 저장되는가?
+- MultipartFile은 사용자가 업로드한 파일을 Spring에서 처리할 수 있도록 제공하는 객체
+- FileStorageService의 store() 메서드에서 파일의 이름, 확장자, 크기를 확인한 후 UUID를 이용해 새로운 파일명을 만들고 Files.copy()를 사용하여 서버의 업로드 폴더에 저장
+Q. 파일을 원본 이름 대신 UUID 기반 파일명으로 저장하는 이유는 무엇인가?
+- 여러 사용자가 같은 이름의 파일을 업로드하더라도 파일이 서로 덮어쓰이지 않도록 하기 위해서
+- UUID를 사용하면 중복 가능성이 매우 낮은 파일명을 만들 수 있고 원본 파일명은 Attachment에 따로 저장하여 화면에 표시할 수 있다
+File Download & Security
+Q. 파일 다운로드 시 Resource, ResponseEntity, Content-Disposition은 각각 어떤 역할을 하는가?
+- Resource는 서버에 저장된 파일을 나타내며 다운로드할 파일을 가져오는 데 사용
+- ResponseEntity는 HTTP 응답 상태와 헤더, 파일 내용을 설정
+- Content-Disposition은 브라우저가 파일을 다운로드하도록 설정
+- 원본 파일명을 전달하는 역할을 한다.
+Q. 파일 저장 과정에서 normalize()와 startsWith()를 사용하는 이유는 무엇인가?
+- normalize()는 파일 경로에 포함된 불필요한 요소를 정리하여 경로를 정규화
+- startsWith()는 정리된 경로가 지정된 업로드 폴더 내부에 있는지 확인
+- 다른 폴더의 파일에 접근하려는 경로 조작을 방지할 수 있다

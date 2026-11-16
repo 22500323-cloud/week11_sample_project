@@ -14,6 +14,7 @@ import java.util.List;
 
 @Controller
 public class PostController {
+    //PostService : 게시글 관련 작업(Controller는 요청을 받고 Service에 작업 전달)
     private final PostService posts;
 
     public PostController(PostService posts) {
@@ -27,7 +28,7 @@ public class PostController {
 
     @GetMapping("/posts")
     public String list(Model model) {
-        model.addAttribute("posts", posts.all());
+        model.addAttribute("posts", posts.all()); //Controller에서 가져온 데이터를 HTML화면으로 posts이름으로 전달
         return "posts/list";
     }
 
@@ -37,12 +38,13 @@ public class PostController {
         return "posts/form";
     }
 
-    @PostMapping("/posts")
+    //사용자가 제목, 내용, 파일 입력 -> PostController가 입력값과 파일 받기 -> PostService가 게시글과 파일 저장 처리 -> 게시글 상세 페이지 이동
+    @PostMapping("/posts") 
     public String create(@Valid @ModelAttribute("postForm") PostForm form, BindingResult errors,
                          @RequestParam(name = "files", required = false) List<MultipartFile> files) {
-        if (errors.hasErrors()) return "posts/form";
-        Long id = posts.create(form, files == null ? List.of() : files);
-        return "redirect:/posts/" + id;
+        if (errors.hasErrors()) return "posts/form"; //오류가 있으면 게시글을 저장하지 않고 작성화면으로 돌아감
+        Long id = posts.create(form, files == null ? List.of() : files); //posts.create를 호출해 게시글과 첨부파일 저장, 첨부파일이 없으면 빈 목록 전달하고 있으면 업로드된 파일 몰록 전달, 저장이 끝나면 생성된 게시글의 id반환
+        return "redirect:/posts/" + id; //완료되면 해당 게시글의 상세 페이지로 이동
     }
 
     @GetMapping("/posts/{id}")

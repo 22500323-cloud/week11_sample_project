@@ -19,9 +19,11 @@ public class AttachmentController {
     }
     @GetMapping("/{id}/download")
     public ResponseEntity<Resource> download(@PathVariable Long id) {
+        //URL에서 전달받은 파일을 이용해 데이터베이스에서 첨부파일 조회
         Attachment file = attachments.findById(id).orElseThrow(() ->
             new ResponseStatusException(HttpStatus.NOT_FOUND, "첨부파일이 없습니다."));
         Resource resource = storage.load(file);
+        //다운로드에 사용할 파일의 이름과 인코딩 방식 설정
         String disposition = ContentDisposition.attachment()
             .filename(file.getOriginalFilename(), StandardCharsets.UTF_8)
             .build().toString();
