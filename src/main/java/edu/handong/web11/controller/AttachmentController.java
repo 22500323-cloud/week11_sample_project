@@ -32,5 +32,27 @@ public class AttachmentController {
             .header(HttpHeaders.CONTENT_DISPOSITION, disposition)
             .body(resource);
     }
-    // STUDENT TODO: GET /attachments/{id}/view (image preview).
+    @GetMapping("/{id}/view")
+    public ResponseEntity<Resource> view(@PathVariable Long id) {
+        Attachment file = attachments.findById(id).orElseThrow(() ->
+                new ResponseStatusException(HttpStatus.NOT_FOUND, "첨부파일이 없습니다."));
+
+        if (file.getContentType() == null ||
+                !(file.getContentType().equals("image/jpeg")
+                        || file.getContentType().equals("image/png")
+                        || file.getContentType().equals("image/gif"))) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "미리보기를 지원하지 않는 파일입니다.");
+        }
+
+        Resource resource = storage.load(file);
+
+        String disposition = ContentDisposition.inline()
+                .filename(file.getOriginalFilename(), StandardCharsets.UTF_8)
+                .build().toString();
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(file.getContentType()))
+                .header(HttpHeaders.CONTENT_DISPOSITION, disposition)
+                .body(resource);
+    }
 }
